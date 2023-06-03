@@ -1,0 +1,8 @@
+{
+    "name": "jp.prozolic.searchgameobjectwindow",
+    "version": "0.0.1",
+    "displayName": "SearchGameObjectWindow",
+    "description": "This package provides the ability to search for GameObjects In Unity",
+    "author": "prozolic",
+    "unity": "2021.3"
+  }
