@@ -16,11 +16,11 @@ UnityプロジェクトのGameObjectを検索する機能を提供するエデ�
 
 押下すると、「SearchGameObjectWindow」ウィンドウが表示されます。
 
-![SearchGameObjectWindow.png](Document\Image\SearchGameObjectWindow.png)
+![SearchGameObjectWindow.png](Document/Image/SearchGameObjectWindow.png)
 
 Search wordに文字入力することで検索処理が実行され、ウィンドウ内に検索結果が表示されます。
 
-![SearchGameObjectWindow_result.png](Document\Image\SearchGameObjectWindow_result.png)
+![SearchGameObjectWindow_result.png](Document/Image/SearchGameObjectWindow_result.png)
 
 ### 検索結果のゲームオブジェクト
 
