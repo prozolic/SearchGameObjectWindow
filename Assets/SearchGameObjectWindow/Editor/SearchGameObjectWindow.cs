@@ -47,6 +47,11 @@ namespace SearchGameObjectWindow
             EditorGUILayoutExtensions.DropShadowLabel("Search Gameobject by word.");
             using (var vertical = new EditorGUILayout.VerticalScope(GUI.skin.box))
             {
+                _searchWord = EditorGUILayout.TextField("Search word", _searchWord);
+                _isCaseSensitive = EditorGUILayout.Toggle("Is Case Sensitive", _isCaseSensitive);
+            }
+            using (var vertical = new EditorGUILayout.VerticalScope(GUI.skin.box))
+            {
                 EditorGUILayout.LabelField("Search range");
                 _targetRange = GUILayout.SelectionGrid(_targetRange, _targetRangeName, _targetRangeName.Length);
             }
@@ -56,9 +61,6 @@ namespace SearchGameObjectWindow
                 _targetType = GUILayout.SelectionGrid(_targetType, _targetTypeName, _targetTypeName.Length);
             }
             GUILayout.Space(5);
-
-            _isCaseSensitive = EditorGUILayout.Toggle("Is Case Sensitive", _isCaseSensitive);
-            _searchWord = EditorGUILayout.TextField("Search word", _searchWord);
 
             // åüçıèàóùé¿çs
             var result = this.SearchObjects(
