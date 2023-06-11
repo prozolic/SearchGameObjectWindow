@@ -9,7 +9,6 @@ namespace SearchGameObjectWindow
 {
     public sealed class SearchGameObjectWindow : EditorWindow
     {
-        private static readonly int SEARCHTYPE_VERTICALCOUNT = 3;
         private string[] _targetTypeNames;
         private int _targetType = 0;
         private bool _isCaseSensitive = false;
@@ -46,16 +45,14 @@ namespace SearchGameObjectWindow
         {
             using (var vertical = new EditorGUILayout.VerticalScope(GUI.skin.box))
             {
-                _searchWord = EditorGUILayout.TextField("Search word", _searchWord);
+                _searchWord = EditorGUILayoutExtensions.TextFieldWithVariableFontSize("Search word", _searchWord, 18);
                 _isCaseSensitive = EditorGUILayout.Toggle("Is Case Sensitive", _isCaseSensitive);
             }
             using (var vertical = new EditorGUILayout.VerticalScope(GUI.skin.box))
             {
-                EditorGUILayout.LabelField("Search type");
                 var typeNames = _targetTypeNames;
-                _targetType = GUILayout.SelectionGrid(_targetType, typeNames, SEARCHTYPE_VERTICALCOUNT);
+                _targetType = EditorGUILayoutExtensions.TabControl(_targetType, typeNames);
             }
-            GUILayout.Space(5);
 
             // åüçıèàóùé¿çs
             var result = this.SearchObjects(
@@ -63,14 +60,6 @@ namespace SearchGameObjectWindow
                     _searchWord ?? string.Empty,
                     EnumExtensions.CastInDefined<SearchType>(_targetType),
                     _isCaseSensitive)).ToArray();
-
-            var style = new GUIStyle()
-            {
-                alignment = TextAnchor.MiddleRight,
-            };
-            style.normal.textColor = EditorStyles.label.normal.textColor;
-            style.focused.textColor = EditorStyles.label.focused.textColor;
-            EditorGUILayout.LabelField($@"Number of display {result.Length}", style);
 
             using (var scrollViewScope = new EditorGUILayout.ScrollViewScope(_scrollPosition))
             {
@@ -83,6 +72,13 @@ namespace SearchGameObjectWindow
                     }
                 }
             }
+            var style = new GUIStyle()
+            {
+                alignment = TextAnchor.MiddleRight,
+            };
+            style.normal.textColor = EditorStyles.label.normal.textColor;
+            style.focused.textColor = EditorStyles.label.focused.textColor;
+            EditorGUILayout.LabelField($@"Number of display {result.Length}", style);
         }
 
         private void ClearCache()
