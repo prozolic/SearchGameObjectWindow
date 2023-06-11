@@ -9,8 +9,8 @@ namespace SearchGameObjectWindow
 {
     public sealed class SearchGameObjectWindow : EditorWindow
     {
-        private static readonly string[] _targetRangeName = new string[] { "All", "Hierarchy" };
-        private static readonly string[] _targetTypeName = new string[] { "GameObject", "Material", "Shader" };
+        private string[] _targetRangeNames;
+        private string[] _targetTypeNames;
 
         private int _targetRange = 0;
         private int _targetType = 0;
@@ -24,21 +24,23 @@ namespace SearchGameObjectWindow
         [MenuItem("Tools/SearchGameObjectWindow")]
         public static void CreateTool() => GetWindow<SearchGameObjectWindow>("Search GameObject");
 
-        private void Awake() => this.ReloadCache();
+        private void Awake() => this.ReloadCache(true);
 
         private void OnDestroy() => this.ClearCache();
 
-        private void OnFocus() => this.ReloadCache();
+        private void OnFocus() => this.ReloadCache(false);
+
+        private void OnValidate() => this.ReloadCache(true);
 
         private void OnHierarchyChange()
         {
-            this.ReloadCache();
+            this.ReloadCache(false);
             this.Repaint();
         }
 
         private void OnProjectChange()
         {
-            this.ReloadCache();
+            this.ReloadCache(false);
             this.Repaint();
         }
 
@@ -53,12 +55,14 @@ namespace SearchGameObjectWindow
             using (var vertical = new EditorGUILayout.VerticalScope(GUI.skin.box))
             {
                 EditorGUILayout.LabelField("Search range");
-                _targetRange = GUILayout.SelectionGrid(_targetRange, _targetRangeName, _targetRangeName.Length);
+                var rangeNames = _targetRangeNames;
+                _targetRange = GUILayout.SelectionGrid(_targetRange, rangeNames, rangeNames.Length);
             }
             using (var vertical = new EditorGUILayout.VerticalScope(GUI.skin.box))
             {
                 EditorGUILayout.LabelField("Search type");
-                _targetType = GUILayout.SelectionGrid(_targetType, _targetTypeName, _targetTypeName.Length);
+                var typeNames = _targetTypeNames;
+                _targetType = GUILayout.SelectionGrid(_targetType, typeNames, typeNames.Length);
             }
             GUILayout.Space(5);
 
@@ -66,8 +70,8 @@ namespace SearchGameObjectWindow
             var result = this.SearchObjects(
                 new SearchCondition(
                     _searchWord ?? string.Empty,
-                    _targetRange,
-                    _targetType,
+                    EnumExtensions.CastInDefined<SearchRange>(_targetRange),
+                    EnumExtensions.CastInDefined<SearchType>(_targetType),
                     _isCaseSensitive)).ToArray();
 
             var style = new GUIStyle()
@@ -98,13 +102,26 @@ namespace SearchGameObjectWindow
             _renderers.Clear();
         }
 
-        private void ReloadCache()
+        private void ReloadCache(bool initializing)
         {
             this.ClearCache();
+
+            if (initializing)
+            {
+                this.ReloadSearchInfo();
+            }
+
             _allObjects.AddRange(Resources.FindObjectsOfTypeAll<GameObject>());
             _hierarchyObjects.AddRange(_allObjects.Where(o => this.IsGameObjectInHierarchyObjects(o.hideFlags)));
             _renderers.AddRange(Resources.FindObjectsOfTypeAll<MeshRenderer>());
             _renderers.AddRange(Resources.FindObjectsOfTypeAll<SkinnedMeshRenderer>());
+        }
+
+        private void ReloadSearchInfo()
+        {
+            var _ = EnumExtensions.GetValues<SearchRange>().Select(e => e.ToAlias());
+            _targetRangeNames = EnumExtensions.GetValues<SearchRange>().Select(e => e.ToAliasName()).ToArray();
+            _targetTypeNames = EnumExtensions.GetValues<SearchType>().Select(e => e.ToAliasName()).ToArray();
         }
 
         private bool IsGameObjectInHierarchyObjects(HideFlags flags)
@@ -131,6 +148,8 @@ namespace SearchGameObjectWindow
                 case SearchType.Material:
                 case SearchType.Shader:
                     return this.SearchObjectsByMaterial(condition);
+                case SearchType.Component:
+                    return this.SearchObjectsByComponent(condition);
             }
             return Array.Empty<GameObject>();
         }
@@ -184,18 +203,42 @@ namespace SearchGameObjectWindow
             return string.Empty;
         }
 
+        private IEnumerable<GameObject> SearchObjectsByComponent(SearchCondition condition)
+        {
+            var searchTarget = condition.IsHierarchyOnly ? _hierarchyObjects : _allObjects;
+
+            foreach(var obj in searchTarget.Where(o => o != null))
+            {
+                var components = obj.GetComponents<Component>();
+                foreach (var component in components.Where(c => c != null))
+                {
+                    var name = component.GetType().Name;
+                    if (name.IndexOf(condition.EnteredWord, condition.Comparison) >= 0)
+                    {
+                        yield return obj;
+                    }
+                }
+            }
+        }
 
         private enum SearchRange
         {
+            [AliasName("All")]
             All = 0,
+            [AliasName("Hierarchy")]
             Hierarchy = 1
         }
 
         private enum SearchType
         {
+            [AliasName("Game Object")]
             GameObject = 0,
+            [AliasName("Material")]
             Material = 1,
+            [AliasName("Shader")]
             Shader = 2,
+            [AliasName("Component")]
+            Component = 3,
         }
 
         private sealed record SearchCondition
@@ -207,12 +250,13 @@ namespace SearchGameObjectWindow
             public bool IsEnteredWord => string.IsNullOrWhiteSpace(this.EnteredWord);
             public bool IsHierarchyOnly => this.Range == SearchRange.Hierarchy;
             public StringComparison Comparison => this.IsCaseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+            public StringComparer Comparer => this.IsCaseSensitive ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase;
 
-            public SearchCondition(string searchword, int searchRange, int searchType, bool isCaseSensitive)
+            public SearchCondition(string searchword, SearchRange searchRange, SearchType searchType, bool isCaseSensitive)
             {
                 EnteredWord = searchword ?? string.Empty;
-                Range = (SearchRange)searchRange;
-                Type = (SearchType)searchType;
+                Range = searchRange;
+                Type = searchType;
                 IsCaseSensitive = isCaseSensitive;
             }
         }
