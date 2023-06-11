@@ -9,10 +9,8 @@ namespace SearchGameObjectWindow
 {
     public sealed class SearchGameObjectWindow : EditorWindow
     {
-        private string[] _targetRangeNames;
+        private static readonly int SEARCHTYPE_VERTICALCOUNT = 3;
         private string[] _targetTypeNames;
-
-        private int _targetRange = 0;
         private int _targetType = 0;
         private bool _isCaseSensitive = false;
         private string _searchWord = string.Empty;
@@ -46,7 +44,6 @@ namespace SearchGameObjectWindow
 
         private void OnGUI()
         {
-            EditorGUILayoutExtensions.DropShadowLabel("Search Gameobject by word.");
             using (var vertical = new EditorGUILayout.VerticalScope(GUI.skin.box))
             {
                 _searchWord = EditorGUILayout.TextField("Search word", _searchWord);
@@ -54,15 +51,9 @@ namespace SearchGameObjectWindow
             }
             using (var vertical = new EditorGUILayout.VerticalScope(GUI.skin.box))
             {
-                EditorGUILayout.LabelField("Search range");
-                var rangeNames = _targetRangeNames;
-                _targetRange = GUILayout.SelectionGrid(_targetRange, rangeNames, rangeNames.Length);
-            }
-            using (var vertical = new EditorGUILayout.VerticalScope(GUI.skin.box))
-            {
                 EditorGUILayout.LabelField("Search type");
                 var typeNames = _targetTypeNames;
-                _targetType = GUILayout.SelectionGrid(_targetType, typeNames, typeNames.Length);
+                _targetType = GUILayout.SelectionGrid(_targetType, typeNames, SEARCHTYPE_VERTICALCOUNT);
             }
             GUILayout.Space(5);
 
@@ -70,7 +61,6 @@ namespace SearchGameObjectWindow
             var result = this.SearchObjects(
                 new SearchCondition(
                     _searchWord ?? string.Empty,
-                    EnumExtensions.CastInDefined<SearchRange>(_targetRange),
                     EnumExtensions.CastInDefined<SearchType>(_targetType),
                     _isCaseSensitive)).ToArray();
 
@@ -119,8 +109,6 @@ namespace SearchGameObjectWindow
 
         private void ReloadSearchInfo()
         {
-            var _ = EnumExtensions.GetValues<SearchRange>().Select(e => e.ToAlias());
-            _targetRangeNames = EnumExtensions.GetValues<SearchRange>().Select(e => e.ToAliasName()).ToArray();
             _targetTypeNames = EnumExtensions.GetValues<SearchType>().Select(e => e.ToAliasName()).ToArray();
         }
 
@@ -156,7 +144,7 @@ namespace SearchGameObjectWindow
 
         private IEnumerable<GameObject> SearchObjectsByGameObjectName(SearchCondition condition)
         {
-            var searchTarget = condition.IsHierarchyOnly ? _hierarchyObjects : _allObjects;
+            var searchTarget = _hierarchyObjects;
             return searchTarget.Where(o =>
                 o != null && o.name.IndexOf(condition.EnteredWord, condition.Comparison) >= 0
             );
@@ -174,15 +162,10 @@ namespace SearchGameObjectWindow
                     var obj = render.gameObject;
                     if (obj == null) break;
 
-                    if (condition.IsHierarchyOnly)
+                    if (_hierarchyObjects.Contains(obj))
                     {
-                        if (_hierarchyObjects.Contains(obj))
-                        {
-                            yield return obj;
-                        }
-                        break;
+                        yield return obj;
                     }
-                    yield return obj;
                 }
             }
         }
@@ -205,7 +188,7 @@ namespace SearchGameObjectWindow
 
         private IEnumerable<GameObject> SearchObjectsByComponent(SearchCondition condition)
         {
-            var searchTarget = condition.IsHierarchyOnly ? _hierarchyObjects : _allObjects;
+            var searchTarget =  _hierarchyObjects;
 
             foreach(var obj in searchTarget.Where(o => o != null))
             {
@@ -219,14 +202,6 @@ namespace SearchGameObjectWindow
                     }
                 }
             }
-        }
-
-        private enum SearchRange
-        {
-            [AliasName("All")]
-            All = 0,
-            [AliasName("Hierarchy")]
-            Hierarchy = 1
         }
 
         private enum SearchType
@@ -244,18 +219,15 @@ namespace SearchGameObjectWindow
         private sealed record SearchCondition
         {
             public string EnteredWord { get; }
-            public SearchRange Range { get; }
             public SearchType Type { get; }
             public bool IsCaseSensitive { get; }
             public bool IsEnteredWord => string.IsNullOrWhiteSpace(this.EnteredWord);
-            public bool IsHierarchyOnly => this.Range == SearchRange.Hierarchy;
             public StringComparison Comparison => this.IsCaseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
             public StringComparer Comparer => this.IsCaseSensitive ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase;
 
-            public SearchCondition(string searchword, SearchRange searchRange, SearchType searchType, bool isCaseSensitive)
+            public SearchCondition(string searchword, SearchType searchType, bool isCaseSensitive)
             {
                 EnteredWord = searchword ?? string.Empty;
-                Range = searchRange;
                 Type = searchType;
                 IsCaseSensitive = isCaseSensitive;
             }
