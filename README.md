@@ -1,6 +1,6 @@
 # SearchGameObjectWindow
 
-UnityプロジェクトのGameObjectを検索する機能を提供するエディタ拡張
+UnityプロジェクトのHierarchy ウィンドウに作成されているGameObjectを検索する機能を提供します。
 
 ## インストール方法
 
@@ -26,16 +26,16 @@ Search wordに文字入力することで検索処理が実行され、ウィン
 
 検索結果に表示されているゲームオブジェクトをクリックすると、Hierarchy ウィンドウ上でそのオブジェクトが選択されます。
 
-### 選択範囲
+### 検索範囲
 
-- シーン内のゲームオブジェクト
 - Hierarchy ウィンドウ
 
 ### 検索対象
 
-- ゲームオブジェクト名
-- マテリアル
-- シェーダー
+- Game Object
+- Material
+- Shader
+- Component
 
 ## Unityバージョン
 
