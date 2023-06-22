@@ -64,11 +64,11 @@ namespace SearchGameObjectWindow
             using (var scrollViewScope = new EditorGUILayout.ScrollViewScope(_scrollPosition))
             {
                 _scrollPosition = scrollViewScope.scrollPosition;
-                foreach (var obj in result)
+                foreach (var r in result)
                 {
-                    if (GUILayout.Button(obj.name))
+                    if (GUILayout.Button($@"{r.gameObject.name}({r.searchTargetName})"))
                     {
-                        Selection.activeGameObject = obj;
+                        Selection.activeGameObject = r.gameObject;
                     }
                 }
             }
@@ -120,10 +120,10 @@ namespace SearchGameObjectWindow
             return (flags & HideFlags.HideAndDontSave) != HideFlags.HideAndDontSave;
         }
 
-        private IEnumerable<GameObject> SearchObjects(SearchCondition condition)
+        private IEnumerable<(GameObject gameObject,string searchTargetName)> SearchObjects(SearchCondition condition)
         {
             // ãÛì¸óÕÇÃèÍçáÇ…ÇÕåüçıÇµÇ»Ç¢ÅB
-            if (condition.IsEnteredWord) return Array.Empty<GameObject>();
+            if (condition.IsEnteredWord) return Array.Empty<(GameObject, string)>();
 
             switch (condition.Type)
             {
@@ -135,24 +135,29 @@ namespace SearchGameObjectWindow
                 case SearchType.Component:
                     return this.SearchObjectsByComponent(condition);
             }
-            return Array.Empty<GameObject>();
+            return Array.Empty<(GameObject, string)>();
         }
 
-        private IEnumerable<GameObject> SearchObjectsByGameObjectName(SearchCondition condition)
+        private IEnumerable<(GameObject, string)> SearchObjectsByGameObjectName(SearchCondition condition)
         {
             var searchTarget = _hierarchyObjects;
-            return searchTarget.Where(o =>
-                o != null && o.name.IndexOf(condition.EnteredWord, condition.Comparison) >= 0
-            );
+            foreach (var obj in searchTarget)
+            {
+                if (obj != null && obj.name.IndexOf(condition.EnteredWord, condition.Comparison) >= 0)
+                {
+                    yield return (obj, obj.name);
+                }
+            }
         }
 
-        private IEnumerable<GameObject> SearchObjectsByMaterial(SearchCondition condition)
+        private IEnumerable<(GameObject, string)> SearchObjectsByMaterial(SearchCondition condition)
         {
             foreach (var render in _renderers.Where(r => r != null))
             {
                 foreach (var material in render.sharedMaterials)
                 {
-                    var index = this.GetSearchTargetTagName(material).IndexOf(condition.EnteredWord, condition.Comparison);
+                    var searchTypeName = this.GetSeachTypeNameFromMaterial(material);
+                    var index = searchTypeName.IndexOf(condition.EnteredWord, condition.Comparison);
                     if (index < 0) break;
 
                     var obj = render.gameObject;
@@ -160,13 +165,13 @@ namespace SearchGameObjectWindow
 
                     if (_hierarchyObjects.Contains(obj))
                     {
-                        yield return obj;
+                        yield return (obj, searchTypeName);
                     }
                 }
             }
         }
 
-        private string GetSearchTargetTagName(Material m)
+        private string GetSeachTypeNameFromMaterial(Material m)
         {
             if (m == null) return string.Empty;
 
@@ -182,7 +187,7 @@ namespace SearchGameObjectWindow
             return string.Empty;
         }
 
-        private IEnumerable<GameObject> SearchObjectsByComponent(SearchCondition condition)
+        private IEnumerable<(GameObject, string)> SearchObjectsByComponent(SearchCondition condition)
         {
             var searchTarget =  _hierarchyObjects;
 
@@ -191,10 +196,10 @@ namespace SearchGameObjectWindow
                 var components = obj.GetComponents<Component>();
                 foreach (var component in components.Where(c => c != null))
                 {
-                    var name = component.GetType().Name;
-                    if (name.IndexOf(condition.EnteredWord, condition.Comparison) >= 0)
+                    var componentName = component.GetType().Name;
+                    if (componentName.IndexOf(condition.EnteredWord, condition.Comparison) >= 0)
                     {
-                        yield return obj;
+                        yield return (obj, componentName);
                     }
                 }
             }
