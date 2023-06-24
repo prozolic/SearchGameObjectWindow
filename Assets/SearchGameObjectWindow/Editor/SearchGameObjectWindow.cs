@@ -9,6 +9,9 @@ namespace SearchGameObjectWindow
 {
     public sealed class SearchGameObjectWindow : EditorWindow
     {
+        private static readonly string SEARCH_WORD_LABEL = "Search Word";
+        private static readonly string IS_CASE_SENSITIVE = "Is Case Sensitive";
+
         private string[] _targetTypeNames;
         private int _targetType = 0;
         private bool _isCaseSensitive = false;
@@ -45,8 +48,8 @@ namespace SearchGameObjectWindow
         {
             using (var vertical = new EditorGUILayout.VerticalScope(GUI.skin.box))
             {
-                _searchWord = EditorGUILayoutExtensions.TextFieldWithVariableFontSize("Search word", _searchWord, 18);
-                _isCaseSensitive = EditorGUILayout.Toggle("Is Case Sensitive", _isCaseSensitive);
+                _searchWord = EditorGUILayoutExtensions.TextFieldWithVariableFontSize(SEARCH_WORD_LABEL, _searchWord, 18);
+                _isCaseSensitive = EditorGUILayout.Toggle(IS_CASE_SENSITIVE, _isCaseSensitive);
             }
             using (var vertical = new EditorGUILayout.VerticalScope(GUI.skin.box))
             {
