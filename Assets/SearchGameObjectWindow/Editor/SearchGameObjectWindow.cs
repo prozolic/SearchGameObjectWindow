@@ -13,7 +13,7 @@ namespace SearchGameObjectWindow
         private static readonly string IS_CASE_SENSITIVE = "Is Case Sensitive";
 
         private string[] _targetTypeNames;
-        private int _targetType = 0;
+        private SearchType _searchType = 0;
         private bool _isCaseSensitive = false;
         private string _searchWord = string.Empty;
         private Vector2 _scrollPosition = Vector2.zero;
@@ -54,14 +54,15 @@ namespace SearchGameObjectWindow
             using (var vertical = new EditorGUILayout.VerticalScope(GUI.skin.box))
             {
                 var typeNames = _targetTypeNames;
-                _targetType = EditorGUILayoutExtensions.TabControl(_targetType, typeNames);
+                var searchTypeValue = EditorGUILayoutExtensions.TabControl((int)_searchType, typeNames);
+                _searchType = EnumExtensions.CastInDefined<SearchType>(searchTypeValue);
             }
 
             // åüçıèàóùé¿çs
             var result = this.SearchObjects(
                 new SearchCondition(
                     _searchWord ?? string.Empty,
-                    EnumExtensions.CastInDefined<SearchType>(_targetType),
+                    _searchType,
                     _isCaseSensitive)).ToArray();
 
             using (var scrollViewScope = new EditorGUILayout.ScrollViewScope(_scrollPosition))
@@ -178,7 +179,7 @@ namespace SearchGameObjectWindow
         {
             if (m == null) return string.Empty;
 
-            switch ((SearchType)_targetType)
+            switch (_searchType)
             {
                 case SearchType.Material:
                     return m.name;
@@ -192,9 +193,9 @@ namespace SearchGameObjectWindow
 
         private IEnumerable<(GameObject, string)> SearchObjectsByComponent(SearchCondition condition)
         {
-            var searchTarget =  _hierarchyObjects;
+            var hierachyObjects =  _hierarchyObjects;
 
-            foreach(var obj in searchTarget.Where(o => o != null))
+            foreach(var obj in hierachyObjects.Where(o => o != null))
             {
                 var components = obj.GetComponents<Component>();
                 foreach (var component in components.Where(c => c != null))
