@@ -37,9 +37,10 @@ Search wordに文字入力することで検索処理が実行され、ウィン
 - Shader
 - Component
 
-## Unityバージョン
+## 動作検証済バージョン
 
-Unity2021.3.12f1にて動作検証済
+- Unity2021.3.12f1
+- Unity2022.3.3f1
 
 ## ライセンス
 
