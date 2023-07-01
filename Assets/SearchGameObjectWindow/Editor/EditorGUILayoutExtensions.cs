@@ -1,23 +1,23 @@
 
 #if UNITY_EDITOR
-using System;
 using System.Collections.Generic;
 using UnityEditor;
-using UnityEditor.Graphs;
 using UnityEngine;
 
 namespace SearchGameObjectWindow
 {
     internal static class EditorGUILayoutExtensions
     {
+        private static readonly GUIStyle _fontSizeStyle = new GUIStyle(EditorStyles.textField);
+        private static readonly SafetyFieldInfo _sLastRectInfo = new SafetyFieldInfo(typeof(EditorGUILayout), "s_LastRect");
+
         public static ExecutionResult<VoidStructure> DropShadowLabel(string label)
         {
             // EditorGUILayoutクラスにDropShadowLabelが存在しないため、独自定義
             // EditorGUILayout.LabelFieldの内部実装をベースに作成
 
             var rect = EditorGUILayout.GetControlRect(hasLabel: true, 18f, EditorStyles.layerMaskField, null);
-            var field = new SafetyFieldInfo(typeof(EditorGUILayout), "s_LastRect");
-            var result = field.SetValue(null, rect);
+            var result = _sLastRectInfo.SetValue(null, rect);
             if (result.IsError) return result;
 
             EditorGUI.DropShadowLabel(rect, label);
@@ -26,7 +26,7 @@ namespace SearchGameObjectWindow
 
         public static string TextFieldWithVariableFontSize(string label, string text, int fontSize)
         {
-            var inputTextStyle = new GUIStyle(EditorStyles.textField);
+            var inputTextStyle = _fontSizeStyle;
             inputTextStyle.fontSize = fontSize;
             return EditorGUILayout.TextField(label, text, inputTextStyle, GUILayout.Height(inputTextStyle.lineHeight * 1.2f));
         }

@@ -1,7 +1,6 @@
 #if UNITY_EDITOR
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using UnityEditor;
 
@@ -12,7 +11,8 @@ namespace SearchGameObjectWindow
         private static readonly string SEARCH_WORD_LABEL = "Search Word";
         private static readonly string IS_CASE_SENSITIVE = "Is Case Sensitive";
 
-        private string[] _targetTypeNames;
+        private GUIStyle _numberOfDislpayStyle;
+        private List<string> _targetSearchTypeNames = new();
         private SearchType _searchType = 0;
         private bool _isCaseSensitive = false;
         private string _searchWord = string.Empty;
@@ -20,6 +20,24 @@ namespace SearchGameObjectWindow
         private readonly List<GameObject> _allObjects = new();
         private readonly List<GameObject> _hierarchyObjects = new();
         private readonly List<Renderer> _renderers = new();
+
+        public GUIStyle NumberOfDislpayStyle 
+        { 
+            get
+            {
+                if (_numberOfDislpayStyle == null)
+                {
+                    var style = new GUIStyle()
+                    {
+                        alignment = TextAnchor.MiddleRight,
+                    };
+                    style.normal.textColor = EditorStyles.label.normal.textColor;
+                    style.focused.textColor = EditorStyles.label.focused.textColor;
+                    _numberOfDislpayStyle = style;
+                }
+                return _numberOfDislpayStyle;
+            }
+        }
 
         [MenuItem("Tools/SearchGameObjectWindow")]
         public static void CreateTool() => GetWindow<SearchGameObjectWindow>("Search GameObject");
@@ -53,8 +71,7 @@ namespace SearchGameObjectWindow
             }
             using (var vertical = new EditorGUILayout.VerticalScope(GUI.skin.box))
             {
-                var typeNames = _targetTypeNames;
-                var searchTypeValue = EditorGUILayoutExtensions.TabControl((int)_searchType, typeNames);
+                var searchTypeValue = EditorGUILayoutExtensions.TabControl((int)_searchType, _targetSearchTypeNames);
                 _searchType = EnumExtensions.CastInDefined<SearchType>(searchTypeValue);
             }
 
@@ -63,26 +80,23 @@ namespace SearchGameObjectWindow
                 new SearchCondition(
                     _searchWord ?? string.Empty,
                     _searchType,
-                    _isCaseSensitive)).ToArray();
+                    _isCaseSensitive));
 
+            int resultCount = 0;
             using (var scrollViewScope = new EditorGUILayout.ScrollViewScope(_scrollPosition))
             {
                 _scrollPosition = scrollViewScope.scrollPosition;
-                foreach (var r in result)
+                foreach (var (gameObject, searchTargetName) in result)
                 {
-                    if (GUILayout.Button($@"{r.gameObject.name}({r.searchTargetName})"))
+                    if (GUILayout.Button($@"{gameObject.name}({searchTargetName})"))
                     {
-                        Selection.activeGameObject = r.gameObject;
+                        Selection.activeGameObject = gameObject;
                     }
+                    resultCount++;
                 }
             }
-            var style = new GUIStyle()
-            {
-                alignment = TextAnchor.MiddleRight,
-            };
-            style.normal.textColor = EditorStyles.label.normal.textColor;
-            style.focused.textColor = EditorStyles.label.focused.textColor;
-            EditorGUILayout.LabelField($@"Number of display {result.Length}", style);
+            
+            EditorGUILayout.LabelField($@"Number of display {resultCount}", this.NumberOfDislpayStyle);
         }
 
         private void ClearCache()
@@ -94,22 +108,34 @@ namespace SearchGameObjectWindow
 
         private void ReloadCache(bool initializing)
         {
+            if (initializing) this.ReloadSearchType();
+
             this.ClearCache();
-
-            if (initializing)
-            {
-                this.ReloadSearchInfo();
-            }
-
             _allObjects.AddRange(Resources.FindObjectsOfTypeAll<GameObject>());
-            _hierarchyObjects.AddRange(_allObjects.Where(o => this.IsGameObjectInHierarchyObjects(o.hideFlags)));
+            _hierarchyObjects.AddRange(this.EnumerateHierarchyObjectsFromAllObjects());
             _renderers.AddRange(Resources.FindObjectsOfTypeAll<MeshRenderer>());
             _renderers.AddRange(Resources.FindObjectsOfTypeAll<SkinnedMeshRenderer>());
         }
 
-        private void ReloadSearchInfo()
+        private void ReloadSearchType()
         {
-            _targetTypeNames = EnumExtensions.GetValues<SearchType>().Select(e => e.ToAliasName()).ToArray();
+            _targetSearchTypeNames.Clear();
+            foreach (var searchType in EnumExtensions.GetValues<SearchType>())
+            {
+                _targetSearchTypeNames.Add(searchType.ToAliasName());
+            }
+        }
+
+        private IEnumerable<GameObject> EnumerateHierarchyObjectsFromAllObjects()
+        {
+            var allObjects = _allObjects;
+            foreach(var obj in allObjects)
+            {
+                if (this.IsGameObjectInHierarchyObjects(obj.hideFlags))
+                {
+                    yield return obj;
+                }
+            }
         }
 
         private bool IsGameObjectInHierarchyObjects(HideFlags flags)
@@ -156,16 +182,18 @@ namespace SearchGameObjectWindow
 
         private IEnumerable<(GameObject, string)> SearchObjectsByMaterial(SearchCondition condition)
         {
-            foreach (var render in _renderers.Where(r => r != null))
+            foreach (var render in _renderers)
             {
+                if (render == null) continue;
+
                 foreach (var material in render.sharedMaterials)
                 {
                     var searchTypeName = this.GetSeachTypeNameFromMaterial(material);
                     var index = searchTypeName.IndexOf(condition.EnteredWord, condition.Comparison);
-                    if (index < 0) break;
+                    if (index < 0) continue;
 
                     var obj = render.gameObject;
-                    if (obj == null) break;
+                    if (obj == null) continue;
 
                     if (_hierarchyObjects.Contains(obj))
                     {
@@ -195,11 +223,15 @@ namespace SearchGameObjectWindow
         {
             var hierachyObjects =  _hierarchyObjects;
 
-            foreach(var obj in hierachyObjects.Where(o => o != null))
+            foreach(var obj in hierachyObjects)
             {
+                if (obj == null) continue;
+
                 var components = obj.GetComponents<Component>();
-                foreach (var component in components.Where(c => c != null))
+                foreach (var component in components)
                 {
+                    if (component == null) continue;
+
                     var componentName = component.GetType().Name;
                     if (componentName.IndexOf(condition.EnteredWord, condition.Comparison) >= 0)
                     {
