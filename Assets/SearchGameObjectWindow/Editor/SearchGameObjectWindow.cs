@@ -10,8 +10,12 @@ namespace SearchGameObjectWindow
     {
         private static readonly string SEARCH_WORD_LABEL = "Search Word";
         private static readonly string IS_CASE_SENSITIVE = "Is Case Sensitive";
+        private static readonly GUILayoutOption THUMBNAIL_HEIGHT_OPTION = GUILayout.Height(36);
+        private static readonly GUILayoutOption THUMBNAIL_WIDTH_OPTION = GUILayout.Width(36);
 
         private GUIStyle _numberOfDislpayStyle;
+        private GUIContent _gameObjectThumbnailContent;
+        private GameObject _lastSectionGameObject;
         private List<string> _targetSearchTypeNames = new();
         private SearchType _searchType = 0;
         private bool _isCaseSensitive = false;
@@ -21,34 +25,29 @@ namespace SearchGameObjectWindow
         private readonly List<GameObject> _hierarchyObjects = new();
         private readonly List<Renderer> _renderers = new();
 
-        public GUIStyle NumberOfDislpayStyle 
-        { 
-            get
-            {
-                if (_numberOfDislpayStyle == null)
-                {
-                    var style = new GUIStyle()
-                    {
-                        alignment = TextAnchor.MiddleRight,
-                    };
-                    style.normal.textColor = EditorStyles.label.normal.textColor;
-                    style.focused.textColor = EditorStyles.label.focused.textColor;
-                    _numberOfDislpayStyle = style;
-                }
-                return _numberOfDislpayStyle;
-            }
-        }
-
         [MenuItem("Tools/SearchGameObjectWindow")]
         public static void CreateTool() => GetWindow<SearchGameObjectWindow>("Search GameObject");
 
-        private void Awake() => this.ReloadCache(true);
+        private void Awake()
+        {
+            this.ReloadCache(true);
+            this.Initialize();
+        }
 
-        private void OnDestroy() => this.ClearCache();
+        private void OnDestroy()
+        {
+            this.ClearCache();
+            _lastSectionGameObject = null;
+        }
 
         private void OnFocus() => this.ReloadCache(false);
 
-        private void OnValidate() => this.ReloadCache(true);
+        private void OnValidate()
+        {
+            this.ReloadCache(true);
+            this.Initialize();
+            _lastSectionGameObject = null;
+        }
 
         private void OnHierarchyChange()
         {
@@ -62,18 +61,15 @@ namespace SearchGameObjectWindow
             this.Repaint();
         }
 
+        private void OnSearchConditionChanged()
+        {
+            _lastSectionGameObject = null;
+        }
+
         private void OnGUI()
         {
-            using (var vertical = new EditorGUILayout.VerticalScope(GUI.skin.box))
-            {
-                _searchWord = EditorGUILayoutExtensions.TextFieldWithVariableFontSize(SEARCH_WORD_LABEL, _searchWord, 18);
-                _isCaseSensitive = EditorGUILayout.Toggle(IS_CASE_SENSITIVE, _isCaseSensitive);
-            }
-            using (var vertical = new EditorGUILayout.VerticalScope(GUI.skin.box))
-            {
-                var searchTypeValue = EditorGUILayoutExtensions.TabControl((int)_searchType, _targetSearchTypeNames);
-                _searchType = EnumExtensions.CastInDefined<SearchType>(searchTypeValue);
-            }
+            // 検索条件のレイアウト処理を実行
+            this.LayoutSearchCondition();
 
             // 検索処理実行
             var result = this.SearchObjects(
@@ -86,17 +82,76 @@ namespace SearchGameObjectWindow
             using (var scrollViewScope = new EditorGUILayout.ScrollViewScope(_scrollPosition))
             {
                 _scrollPosition = scrollViewScope.scrollPosition;
+
                 foreach (var (gameObject, searchTargetName) in result)
                 {
-                    if (GUILayout.Button($@"{gameObject.name}({searchTargetName})"))
+                    using (var scope = new TempGUIbackgroundColorScope(
+                        _lastSectionGameObject == gameObject ? new Color32(90 ,181 ,250, 230) : GUI.backgroundColor))
+                    using (var itemScope = new EditorGUILayout.HorizontalScope(GUI.skin.button))
                     {
-                        Selection.activeGameObject = gameObject;
+                        EditorGUILayout.LabelField(_gameObjectThumbnailContent, THUMBNAIL_HEIGHT_OPTION, THUMBNAIL_WIDTH_OPTION);
+
+                        using (var vertical = new EditorGUILayout.VerticalScope())
+                        {
+                            EditorGUILayout.LabelField(gameObject.name, EditorStyles.boldLabel);
+                            EditorGUILayout.LabelField(searchTargetName);
+                        }
+                        var rect = GUILayoutUtility.GetLastRect();
+                        var type = Event.current.type;
+                        var position = Event.current.mousePosition;
+                        if (type == EventType.MouseDown && rect.Contains(position))
+                        {
+                            Selection.activeGameObject = gameObject;
+                            _lastSectionGameObject = gameObject;
+                            this.Repaint();
+                        }
                     }
                     resultCount++;
                 }
             }
-            
-            EditorGUILayout.LabelField($@"Number of display {resultCount}", this.NumberOfDislpayStyle);
+            EditorGUILayout.LabelField($@"Number of display {resultCount}", _numberOfDislpayStyle);
+        }
+
+        private void LayoutSearchCondition()
+        {
+            var searchWord = _searchWord;
+            var searchType = _searchType;
+            using (var vertical = new EditorGUILayout.VerticalScope(GUI.skin.box))
+            {
+                searchWord = EditorGUILayoutExtensions.TextFieldWithVariableFontSize(SEARCH_WORD_LABEL, searchWord, 18);
+                _isCaseSensitive = EditorGUILayout.Toggle(IS_CASE_SENSITIVE, _isCaseSensitive);
+            }
+            using (var vertical = new EditorGUILayout.VerticalScope(GUI.skin.box))
+            {
+                var searchTypeValue = EditorGUILayoutExtensions.TabControl((int)searchType, _targetSearchTypeNames);
+                searchType = EnumExtensions.CastInDefined<SearchType>(searchTypeValue);
+            }
+            if (searchWord != _searchWord || searchType != _searchType)
+            {
+                _searchWord = searchWord;
+                _searchType = searchType;
+                this.OnSearchConditionChanged();
+            }
+        }
+
+        private void Initialize()
+        {
+            if (_gameObjectThumbnailContent == null)
+            {
+                var thumbnail = AssetPreview.GetMiniTypeThumbnail(typeof(GameObject));
+                _gameObjectThumbnailContent = new GUIContent(thumbnail);
+            }
+
+            if (_numberOfDislpayStyle == null)
+            {
+                var style = new GUIStyle()
+                {
+                    alignment = TextAnchor.MiddleRight,
+                };
+                style.normal.textColor = EditorStyles.label.normal.textColor;
+                style.focused.textColor = EditorStyles.label.focused.textColor;
+                _numberOfDislpayStyle = style;
+            }
         }
 
         private void ClearCache()
