@@ -28,11 +28,7 @@ namespace SearchGameObjectWindow
         [MenuItem("Tools/SearchGameObjectWindow")]
         public static void CreateTool() => GetWindow<SearchGameObjectWindow>("Search GameObject");
 
-        private void Awake()
-        {
-            this.ReloadCache(true);
-            this.Initialize();
-        }
+        private void Awake() => this.ReloadCache(true);
 
         private void OnDestroy()
         {
@@ -45,7 +41,6 @@ namespace SearchGameObjectWindow
         private void OnValidate()
         {
             this.ReloadCache(true);
-            this.Initialize();
             _lastSectionGameObject = null;
         }
 
@@ -68,6 +63,8 @@ namespace SearchGameObjectWindow
 
         private void OnGUI()
         {
+            this.Initialize();
+
             // 検索条件のレイアウト処理を実行
             this.LayoutSearchCondition();
 
