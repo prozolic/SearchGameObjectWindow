@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEditor;
 using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
+using System.Text;
 
 namespace SearchGameObjectWindow
 {
@@ -297,15 +298,25 @@ namespace SearchGameObjectWindow
                 if (obj == null || !condition.IsTargetLayer(obj.layer)) continue;
 
                 var components = obj.GetComponents<Component>();
-                foreach (var component in components)
-                {
-                    if (component == null) continue;
+                var componentNamesBuilder = new StringBuilder();
+                componentNamesBuilder.AppendJoin(",", this.FilterComponent(components, condition));
+                var componentNames = componentNamesBuilder.ToString();
 
-                    var componentName = component.GetType().Name;
-                    if (componentName.IndexOf(condition.EnteredWord, condition.Comparison) >= 0)
-                    {
-                        yield return (obj, componentName);
-                    }
+                if (string.IsNullOrWhiteSpace(componentNames)) continue;
+                yield return (obj, componentNames);
+            }
+        }
+
+        private IEnumerable<string> FilterComponent(IEnumerable<Component> components, SearchCondition condition)
+        {
+            foreach (var component in components)
+            {
+                if (component == null) continue;
+
+                var componentName = component.GetType().Name;
+                if (componentName.IndexOf(condition.EnteredWord, condition.Comparison) >= 0)
+                {
+                    yield return componentName;
                 }
             }
         }
