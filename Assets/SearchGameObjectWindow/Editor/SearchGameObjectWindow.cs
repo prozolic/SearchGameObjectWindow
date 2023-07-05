@@ -119,6 +119,7 @@ namespace SearchGameObjectWindow
         {
             var searchWord = _searchWord;
             var searchType = _searchType;
+            var layerId = _layerId;
             using (var vertical = new EditorGUILayout.VerticalScope(GUI.skin.box))
             {
                 searchWord = EditorGUILayoutExtensions.TextFieldWithVariableFontSize(SEARCH_WORD_LABEL, searchWord, 18);
@@ -126,19 +127,20 @@ namespace SearchGameObjectWindow
 
                 var layers = _tagManager.GetCurrentLayerNames().ToArray();
                 var layerIds = _tagManager.GetCurrentLayerIDs().ToArray();
-                if (!_tagManager.UseLayer(_layerId)) _layerId = Layer.EverythingMask;
+                if (!_tagManager.UseLayer(layerId)) layerId = Layer.EverythingMask;
 
-                _layerId = EditorGUILayout.IntPopup("Layer", _layerId, layers, layerIds);
+                layerId = EditorGUILayout.IntPopup("Layer", layerId, layers, layerIds);
             }
             using (var vertical = new EditorGUILayout.VerticalScope(GUI.skin.box))
             {
                 var searchTypeValue = EditorGUILayoutExtensions.TabControl((int)searchType, _targetSearchTypeNames);
                 searchType = EnumExtensions.CastInDefined<SearchType>(searchTypeValue);
             }
-            if (searchWord != _searchWord || searchType != _searchType)
+            if (searchWord != _searchWord || searchType != _searchType || _layerId != layerId)
             {
                 _searchWord = searchWord;
                 _searchType = searchType;
+                _layerId = layerId;
                 this.OnSearchConditionChanged();
             }
         }
