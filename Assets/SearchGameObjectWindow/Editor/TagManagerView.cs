@@ -38,6 +38,21 @@ namespace SearchGameObjectWindow
             }
         }
 
+        public bool UseLayer(int layerId)
+        {
+            if (layerId == Layer.EverythingMask) return true;
+
+            using (var layers = _tagmanager.FindProperty("layers"))
+            {
+                if (Layer.EverythingMask < layerId && layerId < layers.arraySize)
+                {
+                    var layer = layers.GetArrayElementAtIndex(layerId);
+                    return !string.IsNullOrWhiteSpace(layer.stringValue);
+                }
+                return false;
+            }
+        }
+
         public IEnumerable<int> GetCurrentLayerIDs()
         {
             foreach (var layer in _layers)
@@ -62,21 +77,6 @@ namespace SearchGameObjectWindow
             using (_tagmanager)
                 _tagmanager = null;
 
-        }
-
-        public sealed record Layer
-        {
-            public int Id { get; }
-            public string Name { get; }
-
-            public Layer(int Id, string name) 
-            {
-                this.Id = Id;
-                this.Name = name;
-            }
-            public readonly static Layer Everything = new(~0, "EveryThing");
-            public readonly static int EverythingMask = Everything.Id;
-            public readonly static string EverythingName = Everything.Name;
         }
     }
 }

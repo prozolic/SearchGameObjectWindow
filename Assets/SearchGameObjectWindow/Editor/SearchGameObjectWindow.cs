@@ -1,11 +1,10 @@
 #if UNITY_EDITOR
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 using UnityEngine;
 using UnityEditor;
-using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
-using System.Text;
 
 namespace SearchGameObjectWindow
 {
@@ -22,12 +21,11 @@ namespace SearchGameObjectWindow
         private TagManagerView _tagManager;
         private List<string> _targetSearchTypeNames = new();
         private SearchType _searchType = 0;
-        private int _layerId;
+        private int _layerId = Layer.EverythingMask;
         private bool _isCaseSensitive = false;
         private string _searchWord = string.Empty;
         private Vector2 _scrollPosition = Vector2.zero;
         private readonly List<GameObject> _hierarchyObjects = new();
-        private readonly List<GameObject> _targetObjects = new();
         private readonly List<Renderer> _renderers = new();
 
         [MenuItem("Tools/SearchGameObjectWindow")]
@@ -128,8 +126,9 @@ namespace SearchGameObjectWindow
 
                 var layers = _tagManager.GetCurrentLayerNames().ToArray();
                 var layerIds = _tagManager.GetCurrentLayerIDs().ToArray();
-                _layerId = EditorGUILayout.IntPopup("Layer", _layerId, layers, layerIds);
+                if (!_tagManager.UseLayer(_layerId)) _layerId = Layer.EverythingMask;
 
+                _layerId = EditorGUILayout.IntPopup("Layer", _layerId, layers, layerIds);
             }
             using (var vertical = new EditorGUILayout.VerticalScope(GUI.skin.box))
             {
@@ -353,7 +352,7 @@ namespace SearchGameObjectWindow
 
             public bool IsTargetLayer(int objectLayerId)
             {
-                if (LayerId == TagManagerView.Layer.EverythingMask) return true;
+                if (LayerId == Layer.EverythingMask) return true;
                 return objectLayerId == this.LayerId;
             }
 
