@@ -3,6 +3,8 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
+using System.Linq;
+using System.Runtime.InteropServices.WindowsRuntime;
 
 namespace SearchGameObjectWindow
 {
@@ -16,13 +18,15 @@ namespace SearchGameObjectWindow
         private GUIStyle _numberOfDislpayStyle;
         private GUIContent _gameObjectThumbnailContent;
         private GameObject _lastSectionGameObject;
+        private TagManagerView _tagManager;
         private List<string> _targetSearchTypeNames = new();
         private SearchType _searchType = 0;
+        private int _layerId;
         private bool _isCaseSensitive = false;
         private string _searchWord = string.Empty;
         private Vector2 _scrollPosition = Vector2.zero;
-        private readonly List<GameObject> _allObjects = new();
         private readonly List<GameObject> _hierarchyObjects = new();
+        private readonly List<GameObject> _targetObjects = new();
         private readonly List<Renderer> _renderers = new();
 
         [MenuItem("Tools/SearchGameObjectWindow")]
@@ -33,6 +37,8 @@ namespace SearchGameObjectWindow
         private void OnDestroy()
         {
             this.ClearCache();
+            using (_tagManager)
+                _tagManager = null;
             _lastSectionGameObject = null;
         }
 
@@ -73,6 +79,7 @@ namespace SearchGameObjectWindow
                 new SearchCondition(
                     _searchWord ?? string.Empty,
                     _searchType,
+                    _layerId,
                     _isCaseSensitive));
 
             int resultCount = 0;
@@ -117,6 +124,11 @@ namespace SearchGameObjectWindow
             {
                 searchWord = EditorGUILayoutExtensions.TextFieldWithVariableFontSize(SEARCH_WORD_LABEL, searchWord, 18);
                 _isCaseSensitive = EditorGUILayout.Toggle(IS_CASE_SENSITIVE, _isCaseSensitive);
+
+                var layers = _tagManager.GetCurrentLayerNames().ToArray();
+                var layerIds = _tagManager.GetCurrentLayerIDs().ToArray();
+                _layerId = EditorGUILayout.IntPopup("Layer", _layerId, layers, layerIds);
+
             }
             using (var vertical = new EditorGUILayout.VerticalScope(GUI.skin.box))
             {
@@ -153,20 +165,23 @@ namespace SearchGameObjectWindow
 
         private void ClearCache()
         {
-            _allObjects.Clear();
             _hierarchyObjects.Clear();
             _renderers.Clear();
         }
 
         private void ReloadCache(bool initializing)
         {
-            if (initializing) this.ReloadSearchType();
+            if (initializing)
+            {
+                this.ReloadSearchType();
+                _tagManager ??= new TagManagerView();
+            }
 
             this.ClearCache();
-            _allObjects.AddRange(Resources.FindObjectsOfTypeAll<GameObject>());
             _hierarchyObjects.AddRange(this.EnumerateHierarchyObjectsFromAllObjects());
             _renderers.AddRange(Resources.FindObjectsOfTypeAll<MeshRenderer>());
             _renderers.AddRange(Resources.FindObjectsOfTypeAll<SkinnedMeshRenderer>());
+            _tagManager?.UpdateCache();
         }
 
         private void ReloadSearchType()
@@ -180,7 +195,7 @@ namespace SearchGameObjectWindow
 
         private IEnumerable<GameObject> EnumerateHierarchyObjectsFromAllObjects()
         {
-            var allObjects = _allObjects;
+            var allObjects = Resources.FindObjectsOfTypeAll<GameObject>();
             foreach(var obj in allObjects)
             {
                 if (this.IsGameObjectInHierarchyObjects(obj.hideFlags))
@@ -222,10 +237,12 @@ namespace SearchGameObjectWindow
 
         private IEnumerable<(GameObject, string)> SearchObjectsByGameObjectName(SearchCondition condition)
         {
-            var searchTarget = _hierarchyObjects;
-            foreach (var obj in searchTarget)
+            var hierarchyObjects = _hierarchyObjects;
+            foreach (var obj in hierarchyObjects)
             {
-                if (obj != null && obj.name.IndexOf(condition.EnteredWord, condition.Comparison) >= 0)
+                if (obj == null) continue;
+
+                if (condition.IsTargetLayer(obj.layer) && obj.name.IndexOf(condition.EnteredWord, condition.Comparison) >= 0)
                 {
                     yield return (obj, obj.name);
                 }
@@ -247,7 +264,7 @@ namespace SearchGameObjectWindow
                     var obj = render.gameObject;
                     if (obj == null) continue;
 
-                    if (_hierarchyObjects.Contains(obj))
+                    if (condition.IsTargetLayer(obj.layer) && _hierarchyObjects.Contains(obj))
                     {
                         yield return (obj, searchTypeName);
                     }
@@ -277,7 +294,7 @@ namespace SearchGameObjectWindow
 
             foreach(var obj in hierachyObjects)
             {
-                if (obj == null) continue;
+                if (obj == null || !condition.IsTargetLayer(obj.layer)) continue;
 
                 var components = obj.GetComponents<Component>();
                 foreach (var component in components)
@@ -309,17 +326,26 @@ namespace SearchGameObjectWindow
         {
             public string EnteredWord { get; }
             public SearchType Type { get; }
+            public int LayerId { get; }
             public bool IsCaseSensitive { get; }
             public bool IsEnteredWord => string.IsNullOrWhiteSpace(this.EnteredWord);
             public StringComparison Comparison => this.IsCaseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
             public StringComparer Comparer => this.IsCaseSensitive ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase;
 
-            public SearchCondition(string searchword, SearchType searchType, bool isCaseSensitive)
+            public SearchCondition(string searchword, SearchType searchType, int layerId, bool isCaseSensitive)
             {
                 EnteredWord = searchword ?? string.Empty;
                 Type = searchType;
+                LayerId = layerId;
                 IsCaseSensitive = isCaseSensitive;
             }
+
+            public bool IsTargetLayer(int objectLayerId)
+            {
+                if (LayerId == TagManagerView.Layer.EverythingMask) return true;
+                return objectLayerId == this.LayerId;
+            }
+
         }
     }
 }
