@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace SearchGameObjectWindow
 {
-    public sealed class TempGUIbackgroundColorScope : IDisposable
+    internal sealed class TempGUIbackgroundColorScope : IDisposable
     {
         private Color _tempColor;
 

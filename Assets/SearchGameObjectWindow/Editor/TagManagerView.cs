@@ -6,7 +6,7 @@ using UnityEditor;
 
 namespace SearchGameObjectWindow
 {
-    public sealed class TagManagerView : IDisposable
+    internal sealed class TagManagerView : IDisposable
     {
         private bool _disposed = false;
         private SerializedObject _tagmanager;

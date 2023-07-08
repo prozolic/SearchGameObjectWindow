@@ -2,7 +2,7 @@
 
 namespace SearchGameObjectWindow
 {
-    public sealed record Layer
+    internal sealed record Layer
     {
         public readonly static Layer Everything = new(~0, "EveryThing");
         public readonly static int EverythingMask = Everything.Id;
