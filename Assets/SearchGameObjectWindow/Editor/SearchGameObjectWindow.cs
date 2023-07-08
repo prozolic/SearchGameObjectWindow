@@ -81,68 +81,8 @@ namespace SearchGameObjectWindow
                     _layerId,
                     _isCaseSensitive));
 
-            int resultCount = 0;
-            using (var scrollViewScope = new EditorGUILayout.ScrollViewScope(_scrollPosition))
-            {
-                _scrollPosition = scrollViewScope.scrollPosition;
-
-                foreach (var (gameObject, searchTargetName) in result)
-                {
-                    using (var scope = new TempGUIbackgroundColorScope(
-                        _lastSectionGameObject == gameObject ? new Color32(90 ,181 ,250, 230) : GUI.backgroundColor))
-                    using (var itemScope = new EditorGUILayout.HorizontalScope(GUI.skin.button))
-                    {
-                        EditorGUILayout.LabelField(_gameObjectThumbnailContent, THUMBNAIL_HEIGHT_OPTION, THUMBNAIL_WIDTH_OPTION);
-
-                        using (var vertical = new EditorGUILayout.VerticalScope())
-                        {
-                            EditorGUILayout.LabelField(gameObject.name, EditorStyles.boldLabel);
-                            EditorGUILayout.LabelField(searchTargetName);
-                        }
-                        var rect = GUILayoutUtility.GetLastRect();
-                        var type = Event.current.type;
-                        var position = Event.current.mousePosition;
-                        if (type == EventType.MouseDown && rect.Contains(position))
-                        {
-                            Selection.activeGameObject = gameObject;
-                            _lastSectionGameObject = gameObject;
-                            this.Repaint();
-                        }
-                    }
-                    resultCount++;
-                }
-            }
-            EditorGUILayout.LabelField($@"Number of display {resultCount}", _numberOfDislpayStyle);
-        }
-
-        private void LayoutSearchCondition()
-        {
-            var searchWord = _searchWord;
-            var searchType = _searchType;
-            var layerId = _layerId;
-            using (var vertical = new EditorGUILayout.VerticalScope(GUI.skin.box))
-            {
-                searchWord = EditorGUILayoutExtensions.TextFieldWithVariableFontSize(SEARCH_WORD_LABEL, searchWord, 18);
-                _isCaseSensitive = EditorGUILayout.Toggle(IS_CASE_SENSITIVE, _isCaseSensitive);
-
-                var layers = _tagManager.GetCurrentLayerNames().ToArray();
-                var layerIds = _tagManager.GetCurrentLayerIDs().ToArray();
-                if (!_tagManager.UseLayer(layerId)) layerId = Layer.EverythingMask;
-
-                layerId = EditorGUILayout.IntPopup("Layer", layerId, layers, layerIds);
-            }
-            using (var vertical = new EditorGUILayout.VerticalScope(GUI.skin.box))
-            {
-                var searchTypeValue = EditorGUILayoutExtensions.TabControl((int)searchType, _targetSearchTypeNames);
-                searchType = EnumExtensions.CastInDefined<SearchType>(searchTypeValue);
-            }
-            if (searchWord != _searchWord || searchType != _searchType || _layerId != layerId)
-            {
-                _searchWord = searchWord;
-                _searchType = searchType;
-                _layerId = layerId;
-                this.OnSearchConditionChanged();
-            }
+            // 検索結果のレイアウト処理を実行
+            this.LayoutSearchResult(new SearchResult(result));
         }
 
         private void Initialize()
@@ -163,6 +103,74 @@ namespace SearchGameObjectWindow
                 style.focused.textColor = EditorStyles.label.focused.textColor;
                 _numberOfDislpayStyle = style;
             }
+        }
+
+        private void LayoutSearchCondition()
+        {
+            var searchWord = _searchWord;
+            var searchType = _searchType;
+            var layerId = _layerId;
+            using (var vertical = new EditorGUILayout.VerticalScope(GUI.skin.box))
+            {
+                searchWord = EditorGUILayoutExtensions.TextFieldWithVariableFontSize(SEARCH_WORD_LABEL, searchWord, 18);
+                using (var innerHorizontal = new EditorGUILayout.HorizontalScope())
+                {
+                    EditorGUILayout.PrefixLabel("Search Target");
+                    var searchTypeValue = EditorGUILayoutExtensions.TabControl((int)searchType, _targetSearchTypeNames);
+                    searchType = EnumExtensions.CastInDefined<SearchType>(searchTypeValue);
+                }
+                _isCaseSensitive = EditorGUILayout.Toggle(IS_CASE_SENSITIVE, _isCaseSensitive);
+
+                var layers = _tagManager.GetCurrentLayerNames().ToArray();
+                var layerIds = _tagManager.GetCurrentLayerIDs().ToArray();
+                if (!_tagManager.UseLayer(layerId)) layerId = Layer.EverythingMask;
+
+                layerId = EditorGUILayout.IntPopup("Layer", layerId, layers, layerIds);
+            }
+            if (searchWord != _searchWord || searchType != _searchType || _layerId != layerId)
+            {
+                _searchWord = searchWord;
+                _searchType = searchType;
+                _layerId = layerId;
+                this.OnSearchConditionChanged();
+            }
+        }
+
+        private void LayoutSearchResult(SearchResult searchResult)
+        {
+            int resultCount = 0;
+            using (var scrollViewScope = new EditorGUILayout.ScrollViewScope(_scrollPosition))
+            {
+                _scrollPosition = scrollViewScope.scrollPosition;
+
+                foreach (var (gameObject, searchTargetName) in searchResult.Result)
+                {
+                    using (var scope = new TempGUIbackgroundColorScope(
+                        _lastSectionGameObject == gameObject ? new Color32(90, 181, 250, 230) : GUI.backgroundColor))
+                    using (var itemScope = new EditorGUILayout.HorizontalScope(GUI.skin.button))
+                    {
+                        EditorGUILayout.LabelField(_gameObjectThumbnailContent, THUMBNAIL_HEIGHT_OPTION, THUMBNAIL_WIDTH_OPTION);
+                        var iconRect = GUILayoutUtility.GetLastRect();
+
+                        using (var vertical = new EditorGUILayout.VerticalScope())
+                        {
+                            EditorGUILayout.LabelField(gameObject.name, EditorStyles.boldLabel);
+                            EditorGUILayout.LabelField(searchTargetName);
+                        }
+                        var nameLabelRect = GUILayoutUtility.GetLastRect();
+                        var type = Event.current.type;
+                        var position = Event.current.mousePosition;
+                        if (type == EventType.MouseDown && iconRect.Union(nameLabelRect).Contains(position))
+                        {
+                            Selection.activeGameObject = gameObject;
+                            _lastSectionGameObject = gameObject;
+                            this.Repaint();
+                        }
+                    }
+                    resultCount++;
+                }
+            }
+            EditorGUILayout.LabelField($@"Number of display {resultCount}", _numberOfDislpayStyle);
         }
 
         private void ClearCache()
@@ -359,6 +367,18 @@ namespace SearchGameObjectWindow
             }
 
         }
+
+        private sealed class SearchResult
+        {
+            public IEnumerable<(GameObject gameObject, string searchTargetName)> Result { get; }
+
+            public SearchResult(IEnumerable<(GameObject gameObject, string searchTargetName)> result)
+            {
+                this.Result = result;
+            }
+
+        }
+
     }
 }
 

@@ -10,6 +10,7 @@ namespace SearchGameObjectWindow
     {
         private static readonly GUIStyle _fontSizeStyle = new GUIStyle(EditorStyles.textField);
         private static readonly SafetyFieldInfo _sLastRectInfo = new SafetyFieldInfo(typeof(EditorGUILayout), "s_LastRect");
+        private static readonly GUIStyle LargeButton = new GUIStyle("LargeButton");
 
         public static ExecutionResult<VoidStructure> DropShadowLabel(string label)
         {
@@ -31,8 +32,6 @@ namespace SearchGameObjectWindow
             return EditorGUILayout.TextField(label, text, inputTextStyle, GUILayout.Height(inputTextStyle.lineHeight * 1.2f));
         }
 
-        private static readonly GUIStyle LargeButton = new GUIStyle("LargeButton");
-
         public static int TabControl(int tabPosition, IEnumerable<string> tabNames)
         {
             var tabcontents = new List<GUIContent>();
@@ -42,6 +41,7 @@ namespace SearchGameObjectWindow
             }
             return GUILayout.Toolbar(tabPosition, tabcontents.ToArray(), LargeButton, GUI.ToolbarButtonSize.FitToContents);
         }
+
     }
 
 }
