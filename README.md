@@ -18,17 +18,22 @@ UnityプロジェクトのHierarchy ウィンドウに作成されているGameO
 
 ![SearchGameObjectWindow.png](Document/Image/SearchGameObjectWindow.png)
 
-Search wordに文字入力することで検索処理が実行され、ウィンドウ内に検索結果が表示されます。
+Search Wordに文字入力することで検索処理が実行され、ウィンドウ内に検索結果が表示されます。
 
 ![SearchGameObjectWindow_result.png](Document/Image/SearchGameObjectWindow_result.png)
 
-### 検索結果のゲームオブジェクト
+### 検索結果のGameObject
 
-検索結果に表示されているゲームオブジェクトをクリックすると、Hierarchy ウィンドウ上でそのオブジェクトが選択されます。
+検索結果に表示されているGameObjectをクリックすると、Hierarchy ウィンドウ上でそのオブジェクトが選択されます。
 
 ### 検索範囲
 
-- Hierarchy ウィンドウ
+- Hierarchy ウィンドウに配置されているGameObject
+
+### 検索オプション
+
+- 大文字小文字を区別した検索
+- Layer単位での検索
 
 ### 検索対象
 
