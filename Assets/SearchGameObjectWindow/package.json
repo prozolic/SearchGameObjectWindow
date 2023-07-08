@@ -1,6 +1,6 @@
 {
     "name": "jp.prozolic.searchgameobjectwindow",
-    "version": "0.0.3",
+    "version": "0.0.4",
     "displayName": "SearchGameObjectWindow",
     "description": "This package provides the ability to search for GameObjects In Unity",
     "author": "prozolic",
