@@ -25,6 +25,8 @@ namespace SearchGameObjectWindow
         private bool _isCaseSensitive = false;
         private string _searchWord = string.Empty;
         private Vector2 _scrollPosition = Vector2.zero;
+        private Dictionary<Type, bool> _componentSelectedStatus = new();
+        private Vector2 _extraInspectorScrollPosition = Vector2.zero;
         private readonly List<GameObject> _hierarchyObjects = new();
         private readonly List<Renderer> _renderers = new();
 
@@ -66,6 +68,11 @@ namespace SearchGameObjectWindow
             _lastSectionGameObject = null;
         }
 
+        private void OnSelectionChangedInResult()
+        {
+            _componentSelectedStatus.Clear();
+        }
+
         private void OnGUI()
         {
             this.Initialize();
@@ -81,8 +88,24 @@ namespace SearchGameObjectWindow
                     _layerId,
                     _isCaseSensitive));
 
-            // 検索結果のレイアウト処理を実行
             this.LayoutSearchResult(new SearchResult(result));
+        }
+
+        private void LayoutSearchResult(SearchResult result)
+        {
+            using (var resultScope = new EditorGUILayout.HorizontalScope())
+            {
+                using (var resultItemScope = new EditorGUILayout.VerticalScope())
+                {
+                    // 検索結果のレイアウト処理を実行
+                    this.LayoutSearchResultItem(result);
+                }
+                using (var optionScope = new EditorGUILayout.VerticalScope(GUILayout.MinWidth(400), GUILayout.Width(400)))
+                {
+                    // オプション表示用のレイアウト処理を実行
+                    this.LayoutOption();
+                }
+            }
         }
 
         private void Initialize()
@@ -136,7 +159,7 @@ namespace SearchGameObjectWindow
             }
         }
 
-        private void LayoutSearchResult(SearchResult searchResult)
+        private void LayoutSearchResultItem(SearchResult searchResult)
         {
             int resultCount = 0;
             using (var scrollViewScope = new EditorGUILayout.ScrollViewScope(_scrollPosition))
@@ -162,8 +185,13 @@ namespace SearchGameObjectWindow
                         var position = Event.current.mousePosition;
                         if (type == EventType.MouseDown && iconRect.Union(nameLabelRect).Contains(position))
                         {
+                            var currentActiveObject = _lastSectionGameObject;
                             Selection.activeGameObject = gameObject;
                             _lastSectionGameObject = gameObject;
+                            if (currentActiveObject != gameObject)
+                            {
+                                this.OnSelectionChangedInResult();
+                            }
                             this.Repaint();
                         }
                     }
@@ -171,6 +199,57 @@ namespace SearchGameObjectWindow
                 }
             }
             EditorGUILayout.LabelField($@"Number of display {resultCount}", _numberOfDislpayStyle);
+        }
+
+        private void LayoutOption()
+        {
+            var searchWindowSelectionObject = _lastSectionGameObject;
+            if (searchWindowSelectionObject == null) return;
+
+            using (var scrollViewScope = new EditorGUILayout.ScrollViewScope(_extraInspectorScrollPosition))
+            {
+                _extraInspectorScrollPosition = scrollViewScope.scrollPosition;
+                foreach (var component in searchWindowSelectionObject.GetComponents<Component>())
+                {
+                    var componentType = component.GetType();
+                    if (!_componentSelectedStatus.ContainsKey(componentType))
+                    {
+                        _componentSelectedStatus[componentType] = true;
+                    }
+                    _componentSelectedStatus[componentType] = EditorGUILayoutExtensions.FoldoutInspectorSimpleHeader(
+                        _componentSelectedStatus[componentType],
+                        _gameObjectThumbnailContent,
+                        componentType.Name);
+
+                    if (_componentSelectedStatus[componentType])
+                    {
+                        if (component is Transform)
+                        {
+                            var transformEditor = (SimpleEditor.TransformInspectorSimpleEditor)Editor.CreateEditor(component, typeof(SimpleEditor.TransformInspectorSimpleEditor));
+                            transformEditor.OnEnable();
+                            transformEditor.OnInspectorGUI();
+                        }
+                        else
+                        {
+                            var editor = Editor.CreateEditor(component);
+                            var onEnable = editor.GetType().GetMethod("OnEnable",
+                                System.Reflection.BindingFlags.Instance |
+                                System.Reflection.BindingFlags.Public |
+                                System.Reflection.BindingFlags.NonPublic);
+                            try
+                            {
+                                onEnable?.Invoke(editor, null);
+                                editor.OnInspectorGUI();
+                            }
+                            catch(InvalidCastException ice)
+                            {
+                                //TODO: CameraEditor.OnInspectorGUIでエラーが発生するため、調査中...
+                                Debug.LogWarning(ice);
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         private void ClearCache()
@@ -380,6 +459,8 @@ namespace SearchGameObjectWindow
         }
 
     }
+
+
 }
 
 #endif
