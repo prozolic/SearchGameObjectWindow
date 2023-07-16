@@ -26,6 +26,7 @@ namespace SearchGameObjectWindow
         private string _searchWord = string.Empty;
         private Vector2 _scrollPosition = Vector2.zero;
         private Dictionary<Type, bool> _componentSelectedStatus = new();
+        private Dictionary<Type, SafetyMethodInfo> _onEnableForEditorCache = new();
         private Vector2 _extraInspectorScrollPosition = Vector2.zero;
         private readonly List<GameObject> _hierarchyObjects = new();
         private readonly List<Renderer> _renderers = new();
@@ -221,31 +222,31 @@ namespace SearchGameObjectWindow
                         _gameObjectThumbnailContent,
                         componentType.Name);
 
-                    if (_componentSelectedStatus[componentType])
+                    if (!_componentSelectedStatus[componentType]) continue;
+
+                    if (component is Transform)
                     {
-                        if (component is Transform)
+                        var transformEditor = (SimpleEditor.TransformInspectorSimpleEditor)Editor.CreateEditor(component, typeof(SimpleEditor.TransformInspectorSimpleEditor));
+                        transformEditor.OnEnable();
+                        transformEditor.OnInspectorGUI();
+                    }
+                    else
+                    {
+                        var editor = Editor.CreateEditor(component);
+                        var editorType = editor.GetType();
+                        if (!_onEnableForEditorCache.ContainsKey(editorType))
                         {
-                            var transformEditor = (SimpleEditor.TransformInspectorSimpleEditor)Editor.CreateEditor(component, typeof(SimpleEditor.TransformInspectorSimpleEditor));
-                            transformEditor.OnEnable();
-                            transformEditor.OnInspectorGUI();
+                            _onEnableForEditorCache[editorType] = new SafetyMethodInfo(editorType, "OnEnable");
                         }
-                        else
+                        try
                         {
-                            var editor = Editor.CreateEditor(component);
-                            var onEnable = editor.GetType().GetMethod("OnEnable",
-                                System.Reflection.BindingFlags.Instance |
-                                System.Reflection.BindingFlags.Public |
-                                System.Reflection.BindingFlags.NonPublic);
-                            try
-                            {
-                                onEnable?.Invoke(editor, null);
-                                editor.OnInspectorGUI();
-                            }
-                            catch(InvalidCastException ice)
-                            {
-                                //TODO: CameraEditor.OnInspectorGUIでエラーが発生するため、調査中...
-                                Debug.LogWarning(ice);
-                            }
+                            _onEnableForEditorCache[editorType].Invoke(editor, null);
+                            editor.OnInspectorGUI();
+                        }
+                        catch (InvalidCastException ice)
+                        {
+                            //TODO: CameraEditor.OnInspectorGUIでエラーが発生するため、調査中...
+                            Debug.LogWarning(ice);
                         }
                     }
                 }

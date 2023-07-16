@@ -1,4 +1,5 @@
 #if UNITY_EDITOR
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
@@ -7,21 +8,22 @@ namespace SearchGameObjectWindow
 {
     public static class GUIUtilityExtensions
     {
-        private static Dictionary<string, MethodInfo> _guiUtilityInternalMethods = new ();
+        private static Dictionary<string, SafetyMethodInfo> _guiUtilityInternalMethodCache = new ();
 
         public static bool HasKeyFocus(int controlId)
         {
             var grabMouseControl = GetOrCreateGUIGUIUtilityInternalMethodInfo("HasKeyFocus");
-            return (bool)grabMouseControl?.Invoke(null, new object[] { controlId });
+            var result = grabMouseControl.Invoke<bool>(null, new object[] { controlId });
+            return result.Value;
         }
 
-        private static MethodInfo GetOrCreateGUIGUIUtilityInternalMethodInfo(string methodName)
+        private static SafetyMethodInfo GetOrCreateGUIGUIUtilityInternalMethodInfo(string methodName)
         {
-            if (!_guiUtilityInternalMethods.ContainsKey(methodName))
+            if (!_guiUtilityInternalMethodCache.ContainsKey(methodName))
             {
-                _guiUtilityInternalMethods[methodName] = typeof(GUIUtility).GetMethod(methodName, BindingFlags.NonPublic | BindingFlags.Static);
+                _guiUtilityInternalMethodCache[methodName] = new SafetyMethodInfo(typeof(GUIUtility), methodName);
             }
-            return _guiUtilityInternalMethods[methodName];
+            return _guiUtilityInternalMethodCache[methodName];
         }
     }
 }

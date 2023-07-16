@@ -7,33 +7,34 @@ namespace SearchGameObjectWindow
 {
     public static class GUIExtensions
     {
-        private static Dictionary<string, MethodInfo> _guiInternalMethods = new ();
+        private static Dictionary<string, SafetyMethodInfo> _guiInternalMethodCache = new ();
 
         public static void GrabMouseControl(int id)
         {
             var grabMouseControl = GetOrCreateGUIInternalMethodInfo("GrabMouseControl");
-            grabMouseControl?.Invoke(null, new object[] { id });
+            grabMouseControl.Invoke(null, new object[] { id });
         }
 
         public static bool HasMouseControl(int id)
         {
             var hasMouseControl = GetOrCreateGUIInternalMethodInfo("HasMouseControl");
-            return (bool)hasMouseControl?.Invoke(null, new object[] { id });
+            var result = hasMouseControl.Invoke<bool>(null, new object[] { id });
+            return result.Value;
         }
 
         public static void ReleaseMouseControl()
         {
             var releaseMouseControl = GetOrCreateGUIInternalMethodInfo("ReleaseMouseControl");
-            releaseMouseControl?.Invoke(null, null);
+            releaseMouseControl.Invoke(null, null);
         }
 
-        private static MethodInfo GetOrCreateGUIInternalMethodInfo(string methodName)
+        private static SafetyMethodInfo GetOrCreateGUIInternalMethodInfo(string methodName)
         {
-            if (!_guiInternalMethods.ContainsKey(methodName))
+            if (!_guiInternalMethodCache.ContainsKey(methodName))
             {
-                _guiInternalMethods[methodName] = typeof(GUI).GetMethod(methodName, BindingFlags.NonPublic | BindingFlags.Static);
+                _guiInternalMethodCache[methodName] = new SafetyMethodInfo(typeof(GUI), methodName);
             }
-            return _guiInternalMethods[methodName];
+            return _guiInternalMethodCache[methodName];
         }
     }
 }
