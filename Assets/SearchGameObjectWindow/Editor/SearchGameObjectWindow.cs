@@ -133,6 +133,7 @@ namespace SearchGameObjectWindow
         {
             var searchWord = _searchWord;
             var searchType = _searchType;
+            var isCaseSensitive = _isCaseSensitive;
             var layerId = _layerId;
             using (var vertical = new EditorGUILayout.VerticalScope(GUI.skin.box))
             {
@@ -143,7 +144,7 @@ namespace SearchGameObjectWindow
                     var searchTypeValue = EditorGUILayoutExtensions.TabControl((int)searchType, _targetSearchTypeNames);
                     searchType = EnumExtensions.CastInDefined<SearchType>(searchTypeValue);
                 }
-                _isCaseSensitive = EditorGUILayout.Toggle(IS_CASE_SENSITIVE, _isCaseSensitive);
+                isCaseSensitive = EditorGUILayout.Toggle(IS_CASE_SENSITIVE, isCaseSensitive);
 
                 var layers = _tagManager.GetCurrentLayerNames().ToArray();
                 var layerIds = _tagManager.GetCurrentLayerIDs().ToArray();
@@ -151,11 +152,15 @@ namespace SearchGameObjectWindow
 
                 layerId = EditorGUILayout.IntPopup("Layer", layerId, layers, layerIds);
             }
-            if (searchWord != _searchWord || searchType != _searchType || _layerId != layerId)
+            if (searchWord != _searchWord || 
+                searchType != _searchType || 
+                isCaseSensitive != _isCaseSensitive ||
+                layerId != _layerId)
             {
                 _searchWord = searchWord;
                 _searchType = searchType;
-                _layerId = layerId;
+                _isCaseSensitive = isCaseSensitive;
+                _layerId = layerId; ;
                 this.OnSearchConditionChanged();
             }
         }
