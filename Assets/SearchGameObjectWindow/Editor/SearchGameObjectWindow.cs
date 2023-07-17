@@ -14,6 +14,12 @@ namespace SearchGameObjectWindow
         private static readonly string IS_CASE_SENSITIVE = "Is Case Sensitive";
         private static readonly GUILayoutOption THUMBNAIL_HEIGHT_OPTION = GUILayout.Height(36);
         private static readonly GUILayoutOption THUMBNAIL_WIDTH_OPTION = GUILayout.Width(36);
+        private static readonly GUILayoutOption RESULT_HEADER_MAX_HEIGHT = GUILayout.MaxHeight(20);
+        private static readonly GUILayoutOption RESULT_HEADER_ICON_WIDTH = GUILayout.Width(20);
+        private static readonly GUILayoutOption RESULT_HEADER_ICON_HEIGHT = GUILayout.Height(20);
+        private static readonly GUILayoutOption INSPECTOR_MIN_WIDTH = GUILayout.MinWidth(400);
+        private static readonly GUILayoutOption RESULT_FOOTER_MAX_HEIGHT = GUILayout.MaxHeight(20);
+        private static readonly GUILayoutOption SLIDER_WIDTH = GUILayout.Width(128);
         private static readonly Dictionary<Type, SafetyMethodInfo> _onEnableForEditorCache = new();
         private static readonly Dictionary<Type, GUIContent> _componentThumbnailCache = new();
 
@@ -31,6 +37,7 @@ namespace SearchGameObjectWindow
         private Vector2 _extraInspectorScrollPosition = Vector2.zero;
         private readonly List<GameObject> _hierarchyObjects = new();
         private readonly List<Renderer> _renderers = new();
+        private readonly SearchResult _searchResult = new();
 
         [MenuItem("Tools/SearchGameObjectWindow")]
         public static void CreateTool() => GetWindow<SearchGameObjectWindow>("Search GameObject");
@@ -68,6 +75,7 @@ namespace SearchGameObjectWindow
         private void OnSearchConditionChanged()
         {
             _lastSectionGameObject = null;
+            _searchResult.IsDirty = true;
         }
 
         private void OnSelectionChangedInResult()
@@ -87,15 +95,13 @@ namespace SearchGameObjectWindow
             // 検索条件のレイアウト処理を実行
             this.LayoutSearchCondition();
 
-            // 検索処理実行
-            var result = this.SearchObjects(
-                new SearchCondition(
-                    _searchWord ?? string.Empty,
-                    _searchType,
-                    _layerId,
-                    _isCaseSensitive));
+            if (_searchResult.IsDirty)
+            {
+                // 検索処理実行
+                _searchResult.Reset(this.SearchObjects(new SearchCondition( _searchWord ?? string.Empty,_searchType, _layerId,_isCaseSensitive)));
+            }
 
-            this.LayoutSearchResult(new SearchResult(result));
+            this.LayoutSearchResult();
         }
         private void Initialize()
         {
@@ -149,16 +155,17 @@ namespace SearchGameObjectWindow
             }
         }
 
-        private void LayoutSearchResult(SearchResult result)
+        private void LayoutSearchResult()
         {
-            using (var resultScope = new EditorGUILayout.HorizontalScope(EditorStyles.helpBox, GUILayout.MaxHeight(20)))
+            // ヘッダー部分のレイアウト処理を実行
+            using (var resultScope = new EditorGUILayout.HorizontalScope(EditorStyles.helpBox, RESULT_HEADER_MAX_HEIGHT))
             {
-                EditorGUILayout.LabelField("");
+                EditorGUILayout.LabelField($@"Number of search results {_searchResult.ResultCount}", EditorStyles.boldLabel);
                 GUILayout.FlexibleSpace();
                 var icon = EditorGUIUtility.IconContent("d_Settings Icon");
                 icon.tooltip = null;
 
-                if (GUILayout.Button(icon, GUIStyle.none, GUILayout.Width(20), GUILayout.Height(20)))
+                if (GUILayout.Button(icon, GUIStyle.none, RESULT_HEADER_ICON_WIDTH, RESULT_HEADER_ICON_HEIGHT))
                 {
                     GenericMenu toolsMenu = new GenericMenu();
                     toolsMenu.AddItem(new GUIContent("Inspector"), _canShowInspector, OnClickSearchInfo);
@@ -166,37 +173,37 @@ namespace SearchGameObjectWindow
                 }
             }
 
+            // 検索結果のレイアウト処理を実行
             using (var resultScope = new EditorGUILayout.HorizontalScope())
             {
                 using (var resultItemScope = new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
                 {
-                    // 検索結果のレイアウト処理を実行
-                    this.LayoutSearchResultItem(result);
+                    this.LayoutSearchResultItem();
                 }
                 if (_canShowInspector && _lastSectionGameObject != null)
                 {
-                    using (var optionScope = new EditorGUILayout.VerticalScope(EditorStyles.helpBox, GUILayout.MinWidth(400), GUILayout.Width(400)))
+                    using (var optionScope = new EditorGUILayout.VerticalScope(EditorStyles.helpBox, INSPECTOR_MIN_WIDTH))
                     {
                         // オプション表示用のレイアウト処理を実行
                         this.LayoutInspectorView();
                     }
                 }
             }
-            using (var resultScope = new EditorGUILayout.HorizontalScope(EditorStyles.whiteLabel, GUILayout.Height(12)))
+
+            // フッター部分のレイアウト処理を実行
+            using (var resultScope = new EditorGUILayout.HorizontalScope(EditorStyles.whiteLabel, RESULT_FOOTER_MAX_HEIGHT))
             {
                 GUILayout.FlexibleSpace();
-                EditorGUILayout.Slider(0.5f,0,1, GUILayout.Width(128));
+                EditorGUILayout.Slider(0.5f,0,1, SLIDER_WIDTH);
             }
         }
 
-        private void LayoutSearchResultItem(SearchResult searchResult)
+        private void LayoutSearchResultItem()
         {
-            int searchResultCount = 0;
             using (var scrollViewScope = new EditorGUILayout.ScrollViewScope(_scrollPosition))
             {
                 _scrollPosition = scrollViewScope.scrollPosition;
-
-                foreach (var (gameObject, searchTargetName) in searchResult.Result)
+                foreach (var (gameObject, searchTargetName) in _searchResult.Results)
                 {
                     using (var scope = new TempGUIbackgroundColorScope(
                         _lastSectionGameObject == gameObject ? new Color32(90, 181, 250, 230) : GUI.backgroundColor))
@@ -225,10 +232,8 @@ namespace SearchGameObjectWindow
                             this.Repaint();
                         }
                     }
-                    searchResultCount++;
                 }
             }
-            EditorGUILayout.LabelField($@"Number of display {searchResultCount}", _numberOfDislpayStyle);
         }
 
         private void LayoutInspectorView()
@@ -499,17 +504,24 @@ namespace SearchGameObjectWindow
 
         private sealed class SearchResult
         {
-            public IEnumerable<(GameObject gameObject, string searchTargetName)> Result { get; }
+            private List<(GameObject gameObject, string searchTargetName)> _results = new ();
+            public IEnumerable<(GameObject gameObject, string searchTargetName)> Results => _results;
+            public int ResultCount => _results.Count;
+            public bool IsDirty { get; set; }
 
-            public SearchResult(IEnumerable<(GameObject gameObject, string searchTargetName)> result)
+            public SearchResult()
             {
-                this.Result = result;
+                this.IsDirty = true;
             }
 
+            public void Reset(IEnumerable<(GameObject gameObject, string searchTargetName)> result)
+            {
+                _results.Clear();
+                _results.AddRange(result);
+                this.IsDirty = false;
+            }
         }
-
     }
-
 
 }
 
