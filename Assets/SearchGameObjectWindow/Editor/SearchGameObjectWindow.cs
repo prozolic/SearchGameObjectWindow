@@ -14,9 +14,10 @@ namespace SearchGameObjectWindow
         private static readonly string IS_CASE_SENSITIVE = "Is Case Sensitive";
         private static readonly GUILayoutOption THUMBNAIL_HEIGHT_OPTION = GUILayout.Height(36);
         private static readonly GUILayoutOption THUMBNAIL_WIDTH_OPTION = GUILayout.Width(36);
+        private static readonly Dictionary<Type, SafetyMethodInfo> _onEnableForEditorCache = new();
+        private static readonly Dictionary<Type, GUIContent> _componentThumbnailCache = new();
 
         private GUIStyle _numberOfDislpayStyle;
-        private GUIContent _gameObjectThumbnailContent;
         private GameObject _lastSectionGameObject;
         private TagManagerView _tagManager;
         private List<string> _targetSearchTypeNames = new();
@@ -24,10 +25,9 @@ namespace SearchGameObjectWindow
         private int _layerId = Layer.EverythingMask;
         private bool _isCaseSensitive = false;
         private string _searchWord = string.Empty;
-        private bool _canShowInspector = false;
+        private bool _canShowInspector = true;
         private Vector2 _scrollPosition = Vector2.zero;
         private Dictionary<Type, bool> _componentSelectedStatus = new();
-        private Dictionary<Type, SafetyMethodInfo> _onEnableForEditorCache = new();
         private Vector2 _extraInspectorScrollPosition = Vector2.zero;
         private readonly List<GameObject> _hierarchyObjects = new();
         private readonly List<Renderer> _renderers = new();
@@ -97,14 +97,9 @@ namespace SearchGameObjectWindow
 
             this.LayoutSearchResult(new SearchResult(result));
         }
-
         private void Initialize()
         {
-            if (_gameObjectThumbnailContent == null)
-            {
-                var thumbnail = AssetPreview.GetMiniTypeThumbnail(typeof(GameObject));
-                _gameObjectThumbnailContent = new GUIContent(thumbnail);
-            }
+            this.GetOrCreateComponentThumbnailContent(typeof(GameObject));
 
             if (_numberOfDislpayStyle == null)
             {
@@ -183,7 +178,7 @@ namespace SearchGameObjectWindow
                     using (var optionScope = new EditorGUILayout.VerticalScope(EditorStyles.helpBox, GUILayout.MinWidth(400), GUILayout.Width(400)))
                     {
                         // オプション表示用のレイアウト処理を実行
-                        this.LayoutOption();
+                        this.LayoutInspectorView();
                     }
                 }
             }
@@ -207,7 +202,7 @@ namespace SearchGameObjectWindow
                         _lastSectionGameObject == gameObject ? new Color32(90, 181, 250, 230) : GUI.backgroundColor))
                     using (var itemScope = new EditorGUILayout.HorizontalScope(GUI.skin.button))
                     {
-                        EditorGUILayout.LabelField(_gameObjectThumbnailContent, THUMBNAIL_HEIGHT_OPTION, THUMBNAIL_WIDTH_OPTION);
+                        EditorGUILayout.LabelField(this.GetOrCreateComponentThumbnailContent(typeof(GameObject)), THUMBNAIL_HEIGHT_OPTION, THUMBNAIL_WIDTH_OPTION);
                         var iconRect = GUILayoutUtility.GetLastRect();
 
                         using (var vertical = new EditorGUILayout.VerticalScope())
@@ -236,7 +231,7 @@ namespace SearchGameObjectWindow
             EditorGUILayout.LabelField($@"Number of display {searchResultCount}", _numberOfDislpayStyle);
         }
 
-        private void LayoutOption()
+        private void LayoutInspectorView()
         {
             var searchWindowSelectionObject = _lastSectionGameObject;
             if (searchWindowSelectionObject == null) return;
@@ -253,7 +248,7 @@ namespace SearchGameObjectWindow
                     }
                     _componentSelectedStatus[componentType] = EditorGUILayoutExtensions.FoldoutInspectorSimpleHeader(
                         _componentSelectedStatus[componentType],
-                        _gameObjectThumbnailContent,
+                        this.GetOrCreateComponentThumbnailContent(component),
                         componentType.Name);
 
                     if (!_componentSelectedStatus[componentType]) continue;
@@ -443,6 +438,26 @@ namespace SearchGameObjectWindow
                 }
             }
         }
+
+        private GUIContent GetOrCreateComponentThumbnailContent(Component component)
+        {
+            var type = component.GetType();
+            if (!_componentThumbnailCache.ContainsKey(type))
+            {
+                _componentThumbnailCache[type] = new GUIContent(AssetPreview.GetMiniThumbnail(component));
+            }
+            return _componentThumbnailCache[type];
+        }
+
+        private GUIContent GetOrCreateComponentThumbnailContent(Type componentType)
+        {
+            if (!_componentThumbnailCache.ContainsKey(componentType))
+            {
+                _componentThumbnailCache[componentType] = new GUIContent(AssetPreview.GetMiniTypeThumbnail(componentType));
+            }
+            return _componentThumbnailCache[componentType];
+        }
+
 
         private enum SearchType
         {
