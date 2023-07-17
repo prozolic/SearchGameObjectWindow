@@ -251,6 +251,11 @@ namespace SearchGameObjectWindow
             var searchWindowSelectionObject = _lastSectionGameObject;
             if (searchWindowSelectionObject == null) return;
 
+            using (var resultScope = new EditorGUILayout.HorizontalScope(EditorStyles.helpBox))
+            {
+                EditorGUILayout.LabelField("Inspector");
+            }
+            EditorGUILayout.Space(2);
             using (var scrollViewScope = new EditorGUILayout.ScrollViewScope(_extraInspectorScrollPosition))
             {
                 _extraInspectorScrollPosition = scrollViewScope.scrollPosition;
