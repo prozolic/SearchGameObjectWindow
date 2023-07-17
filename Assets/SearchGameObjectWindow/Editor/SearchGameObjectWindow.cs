@@ -35,6 +35,7 @@ namespace SearchGameObjectWindow
         private Vector2 _scrollPosition = Vector2.zero;
         private Dictionary<Type, bool> _componentSelectedStatus = new();
         private Vector2 _extraInspectorScrollPosition = Vector2.zero;
+        private float _zoomFactor = 1f;
         private readonly List<GameObject> _hierarchyObjects = new();
         private readonly List<Renderer> _renderers = new();
         private readonly SearchResult _searchResult = new();
@@ -194,7 +195,7 @@ namespace SearchGameObjectWindow
             using (var resultScope = new EditorGUILayout.HorizontalScope(EditorStyles.whiteLabel, RESULT_FOOTER_MAX_HEIGHT))
             {
                 GUILayout.FlexibleSpace();
-                EditorGUILayout.Slider(0.5f,0,1, SLIDER_WIDTH);
+                _zoomFactor = GUILayout.HorizontalSlider(_zoomFactor, 1f, 2f, SLIDER_WIDTH);
             }
         }
 
@@ -203,19 +204,28 @@ namespace SearchGameObjectWindow
             using (var scrollViewScope = new EditorGUILayout.ScrollViewScope(_scrollPosition))
             {
                 _scrollPosition = scrollViewScope.scrollPosition;
+                var labelStyle = new GUIStyle(EditorStyles.label);
+                var boldLabelStyle = new GUIStyle(EditorStyles.boldLabel);
+                labelStyle.fontSize = (int)(labelStyle.fontSize * _zoomFactor);
+                boldLabelStyle.fontSize = (int)(boldLabelStyle.fontSize * _zoomFactor);
+
                 foreach (var (gameObject, searchTargetName) in _searchResult.Results)
                 {
+                    var objectNameSize = boldLabelStyle.CalcSize(new GUIContent(gameObject.name));
+                    var searchNameSize = labelStyle.CalcSize(new GUIContent(searchTargetName));
+                    var itemSize = objectNameSize + searchNameSize;
+
                     using (var scope = new TempGUIbackgroundColorScope(
                         _lastSectionGameObject == gameObject ? new Color32(90, 181, 250, 230) : GUI.backgroundColor))
-                    using (var itemScope = new EditorGUILayout.HorizontalScope(GUI.skin.button))
+                    using (var itemScope = new EditorGUILayout.HorizontalScope(GUI.skin.button, GUILayout.Height(itemSize.y)))
                     {
-                        EditorGUILayout.LabelField(this.GetOrCreateComponentThumbnailContent(typeof(GameObject)), THUMBNAIL_HEIGHT_OPTION, THUMBNAIL_WIDTH_OPTION);
+                        EditorGUILayout.LabelField(this.GetOrCreateComponentThumbnailContent(typeof(GameObject)), GUILayout.Height(itemSize.y), THUMBNAIL_WIDTH_OPTION);
                         var iconRect = GUILayoutUtility.GetLastRect();
 
                         using (var vertical = new EditorGUILayout.VerticalScope())
                         {
-                            EditorGUILayout.LabelField(gameObject.name, EditorStyles.boldLabel);
-                            EditorGUILayout.LabelField(searchTargetName);
+                            EditorGUILayout.LabelField(gameObject.name, boldLabelStyle, GUILayout.Height(objectNameSize.y));
+                            EditorGUILayout.LabelField(searchTargetName, labelStyle, GUILayout.Height(searchNameSize.y));
                         }
                         var nameLabelRect = GUILayoutUtility.GetLastRect();
                         var type = Event.current.type;
