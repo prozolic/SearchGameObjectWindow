@@ -58,7 +58,7 @@ SearchGameObjectWindowで選択したGameObjectについて、Inspector ウィ�
 
 ![SearchGameObjectWindow_result.png](Document/Image/SearchGameObjectWindow_inspectorView2.png)
 
-#### 検索結果アイテムのズーム率変更機能
+#### 表示文字のサイズ変更
 
 検索結果に表示されている文字のサイズを変更することができます。
 
