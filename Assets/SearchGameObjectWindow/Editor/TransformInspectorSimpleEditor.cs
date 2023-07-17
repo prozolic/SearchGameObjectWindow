@@ -8,7 +8,7 @@ namespace SearchGameObjectWindow.SimpleEditor
     // UnityEditor.TransformInspectorÇÉxÅ[ÉXÇ…é¿ëï
     // https://github.com/Unity-Technologies/UnityCsReference/blob/master/Editor/Mono/Inspector/TransformInspector.cs#L26
     [CanEditMultipleObjects]
-    public class TransformInspectorSimpleEditor : Editor
+    internal class TransformInspectorSimpleEditor : Editor
     {
         private SerializedProperty _position;
         private SerializedProperty _scale;

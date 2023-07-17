@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace SearchGameObjectWindow
 {
-    public static class GUIUtilityExtensions
+    internal static class GUIUtilityExtensions
     {
         private static Dictionary<string, SafetyMethodInfo> _guiUtilityInternalMethodCache = new ();
 
