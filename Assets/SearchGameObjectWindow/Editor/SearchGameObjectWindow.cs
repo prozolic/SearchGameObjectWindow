@@ -24,6 +24,7 @@ namespace SearchGameObjectWindow
         private int _layerId = Layer.EverythingMask;
         private bool _isCaseSensitive = false;
         private string _searchWord = string.Empty;
+        private bool _canShowInspector = false;
         private Vector2 _scrollPosition = Vector2.zero;
         private Dictionary<Type, bool> _componentSelectedStatus = new();
         private Dictionary<Type, SafetyMethodInfo> _onEnableForEditorCache = new();
@@ -74,6 +75,11 @@ namespace SearchGameObjectWindow
             _componentSelectedStatus.Clear();
         }
 
+        private void OnClickSearchInfo()
+        {
+            _canShowInspector = !_canShowInspector;
+        }
+
         private void OnGUI()
         {
             this.Initialize();
@@ -90,23 +96,6 @@ namespace SearchGameObjectWindow
                     _isCaseSensitive));
 
             this.LayoutSearchResult(new SearchResult(result));
-        }
-
-        private void LayoutSearchResult(SearchResult result)
-        {
-            using (var resultScope = new EditorGUILayout.HorizontalScope())
-            {
-                using (var resultItemScope = new EditorGUILayout.VerticalScope())
-                {
-                    // 検索結果のレイアウト処理を実行
-                    this.LayoutSearchResultItem(result);
-                }
-                using (var optionScope = new EditorGUILayout.VerticalScope(GUILayout.MinWidth(400), GUILayout.Width(400)))
-                {
-                    // オプション表示用のレイアウト処理を実行
-                    this.LayoutOption();
-                }
-            }
         }
 
         private void Initialize()
@@ -165,9 +154,49 @@ namespace SearchGameObjectWindow
             }
         }
 
+        private void LayoutSearchResult(SearchResult result)
+        {
+            using (var resultScope = new EditorGUILayout.HorizontalScope(EditorStyles.helpBox, GUILayout.MaxHeight(20)))
+            {
+                EditorGUILayout.LabelField("");
+                GUILayout.FlexibleSpace();
+                var icon = EditorGUIUtility.IconContent("d_Settings Icon");
+                icon.tooltip = null;
+
+                if (GUILayout.Button(icon, GUIStyle.none, GUILayout.Width(20), GUILayout.Height(20)))
+                {
+                    GenericMenu toolsMenu = new GenericMenu();
+                    toolsMenu.AddItem(new GUIContent("Inspector"), _canShowInspector, OnClickSearchInfo);
+                    toolsMenu.DropDown(new Rect(Event.current.mousePosition, Vector2.zero));
+                }
+            }
+
+            using (var resultScope = new EditorGUILayout.HorizontalScope())
+            {
+                using (var resultItemScope = new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+                {
+                    // 検索結果のレイアウト処理を実行
+                    this.LayoutSearchResultItem(result);
+                }
+                if (_canShowInspector && _lastSectionGameObject != null)
+                {
+                    using (var optionScope = new EditorGUILayout.VerticalScope(EditorStyles.helpBox, GUILayout.MinWidth(400), GUILayout.Width(400)))
+                    {
+                        // オプション表示用のレイアウト処理を実行
+                        this.LayoutOption();
+                    }
+                }
+            }
+            using (var resultScope = new EditorGUILayout.HorizontalScope(EditorStyles.whiteLabel, GUILayout.Height(12)))
+            {
+                GUILayout.FlexibleSpace();
+                EditorGUILayout.Slider(0.5f,0,1, GUILayout.Width(128));
+            }
+        }
+
         private void LayoutSearchResultItem(SearchResult searchResult)
         {
-            int resultCount = 0;
+            int searchResultCount = 0;
             using (var scrollViewScope = new EditorGUILayout.ScrollViewScope(_scrollPosition))
             {
                 _scrollPosition = scrollViewScope.scrollPosition;
@@ -201,10 +230,10 @@ namespace SearchGameObjectWindow
                             this.Repaint();
                         }
                     }
-                    resultCount++;
+                    searchResultCount++;
                 }
             }
-            EditorGUILayout.LabelField($@"Number of display {resultCount}", _numberOfDislpayStyle);
+            EditorGUILayout.LabelField($@"Number of display {searchResultCount}", _numberOfDislpayStyle);
         }
 
         private void LayoutOption()
