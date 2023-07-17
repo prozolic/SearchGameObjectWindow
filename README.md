@@ -26,6 +26,8 @@ Search Wordに文字入力することで検索処理が実行され、ウィン
 
 検索結果に表示されているGameObjectをクリックすると、Hierarchy ウィンドウ上でそのオブジェクトが選択されます。
 
+![SearchGameObjectWindow_result.png](Document/Image/SearchGameObjectWindow_result2.png)
+
 ### 検索範囲
 
 - Hierarchy ウィンドウに配置されているGameObject
@@ -42,7 +44,33 @@ Search Wordに文字入力することで検索処理が実行され、ウィン
 - Shader
 - Component
 
-## 動作検証済バージョン
+### サブ機能
+
+#### Inspector表示(デフォルト有効)
+
+SearchGameObjectWindowで選択したGameObjectについて、Inspector ウィンドウに表示されている詳細情報を表示します。  
+
+- 歯車アイコンをクリックします。
+- Inspectorメニューをチェック状態にします。
+- 検索結果に表示されているアイテムを選択します。
+
+![SearchGameObjectWindow_result.png](Document/Image/SearchGameObjectWindow_inspectorView.png)
+
+![SearchGameObjectWindow_result.png](Document/Image/SearchGameObjectWindow_inspectorView2.png)
+
+#### 検索結果アイテムのズーム率変更機能
+
+検索結果に表示されている文字のサイズを変更することができます。
+
+- SearchGameObjectWindow右下のスライダーを変更する。
+
+![SearchGameObjectWindow_result.png](Document/Image/SearchGameObjectWindow_zoom.png)
+
+## 最新バージョン
+
+Ver.1.0.0
+
+## 動作検証済 Unityバージョン
 
 - Unity2021.3.12f1
 - Unity2022.3.3f1
